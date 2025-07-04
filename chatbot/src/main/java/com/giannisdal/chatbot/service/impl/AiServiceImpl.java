@@ -13,6 +13,7 @@ import java.util.function.Function;
 @Service
 public class AiServiceImpl implements AiService {
 
+    public static final String INITIAL_VALUE = "";
     private final Logger log = LoggerFactory.getLogger(AiServiceImpl.class);
 
     private final Function<UserQuestion, AIResponse> llama;
@@ -34,10 +35,16 @@ public class AiServiceImpl implements AiService {
         UserQuestion userQuestion = new UserQuestion(chatbot.getRequest());
         log.debug("Constructed user question");
 
-        String response = llama.apply(userQuestion).response();
-        log.debug("Generated chatbot response");
-
-        chatbot.setResponse(response);
+        String response = INITIAL_VALUE;
+        try {
+            response = llama.apply(userQuestion).response();
+            log.debug("Raw Ollama response: {}", response); // Add this line!
+            chatbot.setResponse(response);
+        } catch (Exception e) {
+            log.error("Error during Ollama call or response parsing: {}", response, e);
+            chatbot.setResponse("Sorry, an error occurred while processing your request.");
+        }
         return chatbot;
     }
+
 }

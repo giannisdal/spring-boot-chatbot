@@ -19,14 +19,11 @@ import java.util.function.Function;
 
 import com.giannisdal.chatbot.enums.OllamaSetup;
 
-
 @Configuration
 public class AiConfiguration {
 
     private final Logger log = LoggerFactory.getLogger(AiConfiguration.class);
-
     private final HttpClient httpClient = HttpClient.newHttpClient();
-
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${ollama.url}")
@@ -34,7 +31,6 @@ public class AiConfiguration {
 
     @Value("${ollama.model}")
     private String ollamaModel;
-
 
     @Value("${ollama.temperature}")
     private double ollamaTemperature;
@@ -54,24 +50,26 @@ public class AiConfiguration {
         this.messageSource = messageSource;
     }
 
-    public record UserQuestion(String question) {}
+    public record UserQuestion(String question) {
+    }
 
-    public record AIResponse(String response) {}
+    public record AIResponse(String response) {
+    }
 
     @Bean
     public Function<UserQuestion, AIResponse> chatWithLlama() {
         log.debug("Configuring Llama chatbot function");
         return this::processUserQuestion;
-
     }
 
     private AIResponse processUserQuestion(UserQuestion userQuestion) {
         try {
-            // This is the prompt that will go to the LLM
+            // Build prompt
             String prompt = OllamaSetup.INITIAL_PROMPT.getMessage(messageSource)
                     + userQuestion.question()
                     + OllamaSetup.STOP_SEQUENCE.getMessage(messageSource);
 
+            // Create request body
             String requestBody = objectMapper.writeValueAsString(Map.of(
                     OllamaSetup.MODEL.getMessage(messageSource), ollamaModel,
                     OllamaSetup.PROMPT.getMessage(messageSource), prompt,
@@ -81,16 +79,24 @@ public class AiConfiguration {
                     OllamaSetup.PRESENCE_PENALTY.getMessage(messageSource), ollamaPresencePenalty
             ));
 
+            // Send HTTP call
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(ollamaUrl))
-                    .header(OllamaSetup.CONTENT_TYPE.getMessage(messageSource), OllamaSetup.CONTENT_TYPE_VALUE.getMessage(messageSource))
+                    .header(OllamaSetup.CONTENT_TYPE.getMessage(messageSource),
+                            OllamaSetup.CONTENT_TYPE_VALUE.getMessage(messageSource))
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
                     .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            TypeReference<Map<String, Object>> typeReference = new TypeReference<>() {};
-            Map<String, Object> llamaResponse = objectMapper.readValue(response.body(), typeReference);
-            String responseText = llamaResponse.get(OllamaSetup.RESPONSE.getMessage(messageSource)).toString();
+            HttpResponse<String> httpResp =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // Parse JSON into Map
+            TypeReference<Map<String, Object>> tr = new TypeReference<>() {
+            };
+            Map<String, Object> llamaResponse = objectMapper.readValue(httpResp.body(), tr);
+
+            // Extract the text whether it's /api/generate or /api/chat
+            String responseText = extractAnswer(llamaResponse);
 
             return new AIResponse(responseText);
 
@@ -102,6 +108,15 @@ public class AiConfiguration {
         }
     }
 
-
-
+    @SuppressWarnings("unchecked")
+    private String extractAnswer(Map<String, Object> resp) {
+        // 1) If /api/generate → top-level "response"
+        String key = OllamaSetup.RESPONSE.getMessage(messageSource);
+        if (resp.containsKey(key) && resp.get(key) != null) {
+            return resp.get(key).toString();
+        }
+        // 2) Otherwise assume /api/chat → nested message.content
+        Map<String, Object> msg = (Map<String, Object>) resp.get("message");
+        return msg.get("content").toString();
+    }
 }

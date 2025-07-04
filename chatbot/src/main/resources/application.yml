@@ -1,10 +1,11 @@
 ollama:
-  url: http://localhost:11434/api/generate
-  model: llama3.2:1b
+  url: "${SPRING_OLLAMA_URL:http://ollama:11434/api/generate}"
+  model: qwen3:0.6b
   stream: false
   temperature: 0.3
   num_predict: 100
   presence_penalty: 1.5
+
 
 logging:
   level:
