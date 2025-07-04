@@ -14,11 +14,4 @@ public class ChatbotApplication {
 		SpringApplication.run(ChatbotApplication.class, args);
 	}
 
-	@Bean
-	public ApplicationRunner showFinalStartupMessage() {
-		return args -> {
-			Logger log = LoggerFactory.getLogger(ChatbotApplication.class);
-			log.info("\n========================================\n   🚀 Spring Boot application started!   \n========================================\n");
-		};
-	}
 }
