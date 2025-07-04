@@ -72,7 +72,11 @@ Response body:
 ```
 {
   "request": "what is quantum mechenics?",
-  "response": "Quantum mechanics is a branch of physics that describes the behavior of matter and energy at an atomic and subatomic level, where the classical laws of physics no longer apply. At these scales, particles can exist in multiple states simultaneously and be connected in ways that defy classical notions of space and time. The study of quantum mechanics has led to numerous breakthroughs in technology, including transistors, lasers, and computer chips, and has also been applied to fields such as medicine, finance, and materials science."
+  "response": "Quantum mechanics is a branch of physics that describes the behavior of matter and energy at an atomic 
+  and subatomic level, where the classical laws of physics no longer apply. At these scales, particles can exist in 
+  multiple states simultaneously and be connected in ways that defy classical notions of space and time. The study of 
+  quantum mechanics has led to numerous breakthroughs in technology, including transistors, lasers, and computer chips, 
+  and has also been applied to fields such as medicine, finance, and materials science."
 }
 ```
 
@@ -91,3 +95,75 @@ Response body:
 ## License
 MIT
 
+## Docker Support
+
+### Running with Docker Compose
+
+The application comes with Docker support, including a full setup with both the Spring Boot application and an Ollama LLM backend.
+
+#### Prerequisites
+- Docker and Docker Compose installed on your system
+
+#### Quick Start
+1. Clone this repository
+2. From the root directory (containing the docker-compose.yml file), run:
+   ```
+   docker-compose up -d
+   ```
+3. This will:
+   - Build and start the Ollama container with the specified LLM model
+   - Build and start the Spring Boot chatbot application
+   - Connect them together automatically
+
+#### Accessing the Application
+- The chatbot API will be available at: `http://localhost:8080/api/chatbots`
+- Ollama service will be available at: `http://localhost:11434`
+
+#### Environment Variables
+You can configure the connection to Ollama using environment variables:
+- `SPRING_OLLAMA_URL`: The URL of the Ollama API (default: http://ollama:11434/api/generate)
+
+#### Docker Volumes
+- `ollama-data`: Persists the Ollama models between container restarts
+
+#### Maven Dependencies Caching
+The Dockerfile is configured to cache Maven dependencies separately from the application build, which:
+- Significantly speeds up subsequent builds
+- Avoids re-downloading dependencies when only application code changes
+- Ensures consistent builds across different environments
+
+#### Changing the LLM Model
+To change the LLM model used by Ollama:
+
+1. Update the model name in `application.yml`:
+   ```yaml
+   ollama:
+     model: llama3.2:1b  # Change this to your desired model
+   ```
+
+2. When you start the containers with `docker-compose up -d`, you'll see the following process:
+   ```
+   chatbot  | ========================================
+   chatbot  |    🚀 Spring Boot application started!   
+   chatbot  | ========================================
+   ollama   | pulling manifest 
+   ollama   | pulling manifest 
+   ollama   | pulling 74701a8c35f6: 100% ▕██████████████████▏ 1.3 GB                         
+   ollama   | verifying sha256 digest 
+   ollama   | writing manifest 
+   ollama   | success 
+   ollama   | ✅  model ready
+   ```
+
+3. The first time you use a new model, Ollama will automatically download it, which might take a few minutes depending on your internet connection and the model size.
+
+#### Custom Configuration
+To modify configurations:
+1. Edit the `application.yml` file before building
+2. Or override specific parameters in the docker-compose.yml environment section
+
+#### Rebuilding After Changes
+```
+docker-compose down
+docker-compose --build
+```

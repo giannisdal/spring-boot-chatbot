@@ -1,6 +1,6 @@
 ollama:
   url: "${SPRING_OLLAMA_URL:http://ollama:11434/api/generate}"
-  model: qwen3:0.6b
+  model: llama3.2:1b
   stream: false
   temperature: 0.3
   num_predict: 100
